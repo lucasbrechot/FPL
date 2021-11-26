@@ -5,7 +5,7 @@ import plotly.express as px
 
 st.title('FPL Player Dashboard')
 
-DATA_URL = ('/Users/lucasbrechot/Streamlit/player_summary_data.csv')
+DATA_URL = f"https://docs.google.com/spreadsheets/d/1qmYMedwJDy4j0vXB7pED_ruzcxjGXMUAXVhUbAcnTmk/gviz/tq?tqx=out:csv&sheet=paste"
 
 @st.cache
 def load_data(nrows):
@@ -23,7 +23,7 @@ data_load_state.text('Loading data...done!')
 
 data = data.drop(['id'], axis=1)
 data = data.drop(['team'], axis=1)
-data = data.drop(['unnamed: 0'], axis=1)
+#data = data.drop(['unnamed: 0'], axis=1)
 data = data.drop(['min'], axis=1)
 
 
@@ -35,7 +35,7 @@ data['cost'] = data['cost'].astype('float').round(2)
 
 
 data['form'] = data['form'].astype(float)
-data['index'] = data['index'].astype(int)
+data['index'] = data['index'].astype(float)
 data['ict'] = data['ict'].astype(int)
 data['selected %'] = data['selected %'].astype(int)
 
