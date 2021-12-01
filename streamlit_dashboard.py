@@ -5,9 +5,19 @@ import plotly.express as px
 
 st.title('FPL Player Dashboard')
 
+st.subheader('About the data')
+st.markdown('Fdr: calculated based on the difficulty of the player next 5 fixtures. The lower the number the easier the next 5 fixtures are.' )
+st.markdown('Form: calculated based on the points accumulated by the player over the last 5 fixtures')
+st.markdown('Index: indicator based on form, fdr and ict index. the ponderations of these factors comes from a linear regression of these influence of these 3 indicators on points accumulated throughout this season')
+
+st.markdown('Data source 1: https://fantasy.premierleague.com/api/element-summary/')
+st.markdown('Data source 2: https://fantasy.premierleague.com/api/bootstrap-static/')
+
+
+
 DATA_URL = f"https://docs.google.com/spreadsheets/d/1qmYMedwJDy4j0vXB7pED_ruzcxjGXMUAXVhUbAcnTmk/gviz/tq?tqx=out:csv&sheet=paste"
 
-@st.cache
+#@st.cache
 def load_data(nrows):
     data = pd.read_csv(DATA_URL, nrows=nrows)
     lowercase = lambda x: str(x).lower()
@@ -15,11 +25,11 @@ def load_data(nrows):
     return data
 
 # Create a text element and let the reader know the data is loading.
-data_load_state = st.text('Loading data...')
+#data_load_state = st.text('Loading data...')
 # Load 10,000 rows of data into the dataframe.
 data = load_data(10000)
 # Notify the reader that the data was successfully loaded.
-data_load_state.text('Loading data...done!')
+#data_load_state.text('Loading data...done!')
 
 data = data.drop(['id'], axis=1)
 data = data.drop(['team'], axis=1)
@@ -96,11 +106,11 @@ if players_selected:
     data_filtered = step2_data[step2_data.name.isin(players_selected)]
 else: data_filtered = step2_data
 
-st.subheader('Plot Chart')
+st.subheader('Players mapped by Form (x), Fdr (y) and Index (size)')
 
 fig = px.scatter(data_filtered, x="form", y="fdr", hover_data=['name'], size='ict', color="index")
 st.plotly_chart(fig, use_container_width=True)
 
-st.subheader('Table')
+st.subheader('Full data')
 
 st.table(data_filtered)
