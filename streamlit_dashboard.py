@@ -8,10 +8,10 @@ st.title('FPL Player Dashboard')
 st.subheader('About the data')
 st.markdown('Fdr: calculated based on the difficulty of the player next 5 fixtures. The lower the number the easier the next 5 fixtures are.' )
 st.markdown('Form: calculated based on the points accumulated by the player over the last 5 fixtures')
-st.markdown('Index: indicator based on form, fdr and ict index. the ponderations of these factors comes from a linear regression of these influence of these 3 indicators on points accumulated throughout this season')
+st.markdown('Index: indicator based on form, fdr and ict index. the ponderations of these factors comes from a linear regression of how these 3 indicators correlate to points accumulated throughout this season')
 
-st.markdown('Data source 1: https://fantasy.premierleague.com/api/element-summary/')
-st.markdown('Data source 2: https://fantasy.premierleague.com/api/bootstrap-static/')
+st.markdown('Data source for future fixtures difficulty: https://fantasy.premierleague.com/api/element-summary/')
+st.markdown('Data source for past performance: https://fantasy.premierleague.com/api/bootstrap-static/')
 
 
 
