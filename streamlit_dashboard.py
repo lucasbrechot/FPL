@@ -68,6 +68,9 @@ data['fdr'] = data['fdr'].round(1)
 
 # Step 1 filtering data for positions
 
+st.sidebar.subheader('Filter data below')
+
+
 slider_values = st.sidebar.slider(
     'Select a price range',
     0.0, 14.0, (4.5, 13.0)
