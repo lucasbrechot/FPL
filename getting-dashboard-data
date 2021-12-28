@@ -1,0 +1,200 @@
+#Notebook Config
+import requests
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from IPython.display import Image, HTML
+from statistics import mean
+import json
+from bs4 import BeautifulSoup
+
+#>> Set up data exports functions
+
+def get_fpl_data(url):
+    r = requests.get(url)
+    json = r.json()
+    return json
+
+def return_understat_data(url,n):
+    result = requests.get(url)
+    soup = BeautifulSoup(result.content,'html.parser')
+    scripts = soup.find_all('script')
+    strings = scripts[n].string
+    
+    ind_start = strings.index("('")+2
+    ind_end =strings.index("')")
+    json_data = strings[ind_start:ind_end]
+    json_data = json_data.encode('utf8').decode('unicode_escape')
+
+    data = json.loads(json_data)
+    
+    df = pd.DataFrame(data)
+    return df
+
+#>> Set up FPL player and fixtures tables
+elements = get_fpl_data('https://fantasy.premierleague.com/api/bootstrap-static/')
+elements_df = pd.DataFrame(elements['elements'])
+elements_df = elements_df[elements_df["minutes"].astype(int) > 0]
+
+all_understat_df = return_understat_data("https://understat.com/league/EPL/2021",3)
+
+fixtures = get_fpl_data('https://fantasy.premierleague.com/api/fixtures/')
+fixtures_df = pd.DataFrame(fixtures)
+
+#>> Join table to match FPL and understat dat
+
+mapping_table_df = pd.read_csv('player_name_mapping.csv')
+
+##### Preparing target dtaframe and variables
+
+player_data = {'fpl_player_id': [],
+               'fdr': [],
+               'ict_index_last4': [],
+               'form_last4': [],
+               'xG_last4':[],
+               'xA_last4':[],
+               'assist_last4':[],
+               'shots_last4':[], 
+               'key_passes_last4':[],
+               'goals_last4':[],
+               'ict_index_season': [],
+               'form_season': [],
+               'xG_season':[],
+               'xA_season':[],
+               'assist_season':[],
+               'shots_season':[], 
+               'key_passes_season':[],
+               'goals_season':[]
+              }
+player_data_df = pd.DataFrame(player_data)
+
+
+players_list = mapping_table_df["fpl_player_id"].unique()
+#players_list = [233]
+
+for p in players_list: 
+
+    #########
+    url_2 = 'https://fantasy.premierleague.com/api/element-summary/'+ str(p)+'/'
+    json_2 = get_fpl_data(url_2)
+    fpl_player_df = pd.DataFrame(json_2['history'])
+    fpl_player_df["date"] = pd.to_datetime(fpl_player_df["kickoff_time"].str[:10])
+
+
+    #########
+    player_mapping = mapping_table_df[mapping_table_df["fpl_player_id"] == p]
+    understat_player_id = player_mapping["understat_player_id"].iloc[0]
+    fpl_player_id = player_mapping["fpl_player_id"].iloc[0]
+    
+    fpl_player_df["understat_player_id"] = understat_player_id
+
+    url = "https://understat.com/player/" + str(understat_player_id)
+    understat_player_df = return_understat_data(url,4)
+    understat_player_df["player_id"] = understat_player_id
+    understat_player_df = understat_player_df[understat_player_df["season"] == '2021']
+    understat_player_df["date"] = pd.to_datetime(understat_player_df["date"])
+
+    player_df = pd.merge(fpl_player_df, understat_player_df,  how='left', left_on=['understat_player_id','date'], right_on = ['player_id','date'])
+
+    
+    # Getting last 4 weeks values
+
+    player_df['xG']= pd.to_numeric(player_df['xG'])
+    player_df['xA']= pd.to_numeric(player_df['xA'])
+    player_df['shots']= pd.to_numeric(player_df['shots'])
+    player_df['assists']= pd.to_numeric(player_df['assists_x'])
+    player_df['key_passes']= pd.to_numeric(player_df['key_passes'])
+    player_df['goals']= pd.to_numeric(player_df['goals'])
+    player_df["points"] = pd.to_numeric(player_df["total_points"])
+    player_df["ict"] = pd.to_numeric(player_df["ict_index"])
+
+    e = player_df["round"].max()
+    last_four = e - 4 
+
+    
+    last_4_gameweeks = player_df[player_df["round"] > last_four]
+
+    form = last_4_gameweeks["points"].mean()
+    ict_index = last_4_gameweeks["ict"].mean()
+    xG = last_4_gameweeks['xG'].sum(axis=0)
+    xA = last_4_gameweeks['xA'].sum(axis=0)
+    shots = last_4_gameweeks['shots'].sum(axis=0)
+    assists = last_4_gameweeks['assists'].sum()
+    key_passes = last_4_gameweeks['key_passes'].sum(axis=0)
+    goals = last_4_gameweeks['goals'].sum(axis=0)
+    
+    # Getting season values
+    
+    elements_player_df = elements_df[elements_df["id"] == fpl_player_id]
+    all_understat_player_df = all_understat_df[all_understat_df["id"] == str(understat_player_id)]
+
+    form_season = pd.to_numeric(elements_player_df["form"].iloc[0])
+    ict_index_season = pd.to_numeric(elements_player_df["ict_index"].iloc[0])
+    xG_season = pd.to_numeric(all_understat_player_df["xG"].iloc[0])
+    xA_season = pd.to_numeric(all_understat_player_df["xA"].iloc[0])
+    assist_season = pd.to_numeric(all_understat_player_df["assists"].iloc[0])
+    shots_season = pd.to_numeric(all_understat_player_df["shots"].iloc[0])
+    key_passes_season = pd.to_numeric(all_understat_player_df["key_passes"].iloc[0])
+    goals_season = pd.to_numeric(all_understat_player_df["goals"].iloc[0])
+
+    
+    # Getting fixture difficulty values
+    
+    player_fixtures_df = pd.DataFrame(json_2['fixtures'])
+
+    remaining_events_list = player_fixtures_df["event"].unique()
+
+    remaining_events_list = [x for x in remaining_events_list if x!=None]
+    next_event = min(remaining_events_list)
+    next_five_event = next_event + 4
+
+    next_five_event_df = player_fixtures_df[player_fixtures_df["event"] <= next_five_event]
+
+    fdr = next_five_event_df["difficulty"].mean()
+    
+    
+    # Appending to dataframe
+
+    player_data_df = player_data_df.append({'fpl_player_id': p, 
+                                                    'ict_index_last4': ict_index,
+                                                    'form_last4': form,
+                                                    'fdr': fdr, 
+                                                    'xG_last4': xG, 
+                                                    'xA_last4':xA,
+                                                    'goals_last4': goals, 
+                                                    'assist_last4':assists,
+                                                    'shots_last4': shots, 
+                                                    'key_passes_last4':key_passes,
+                                                    'ict_index_season': ict_index_season,
+                                                    'form_season': form_season,
+                                                    'xG_season':xG_season,
+                                                    'xA_season': xA_season,
+                                                    'assist_season': assist_season,
+                                                    'shots_season': shots_season, 
+                                                    'key_passes_season': key_passes_season,
+                                                    'goals_season': goals_season
+                                                    }
+                                                    , ignore_index=True)
+
+
+player_data_df =pd.merge(player_data_df, elements_df[['id','web_name','element_type','now_cost','selected_by_percent','team']], how='left', left_on='fpl_player_id', right_on='id')
+
+element_types_df = pd.DataFrame(elements['element_types'])
+teams_df = pd.DataFrame(elements['teams'])
+
+player_data_df = pd.merge(left=player_data_df,right=element_types_df[['id','singular_name']],left_on='element_type', right_on='id', how='left')
+player_data_df = player_data_df.rename(columns = {'singular_name': 'position'})
+
+player_data_df = pd.merge(left=player_data_df,right=teams_df[['id','name']],left_on='team', right_on='id', how='left')
+player_data_df = player_data_df.rename(columns = {'name': 'team_name'})
+
+player_data_df = player_data_df.drop(["id_x","id_y","id", "element_type","team"],axis=1)
+
+
+player_data_df["index"] = 0.70 + (-0.07 * player_data_df["ict_index_last4"]) + (1.05 * player_data_df["form_last4"]) + (-0.22 * player_data_df["fdr"]) + (0.11 * player_data_df["xG_last4"])+ (0.25 * player_data_df["xA_last4"])+ (-0.15 * player_data_df["assist_last4"])+ (-0.01 * player_data_df["shots_last4"])
+
+
+player_data_df["expected_actual_last4"] = (player_data_df["xG_last4"]+player_data_df["xA_last4"])/(player_data_df["goals_last4"]+player_data_df["assist_last4"])
+player_data_df["expected_actual_season"] = (player_data_df["xG_season"]+player_data_df["xA_season"])/(player_data_df["goals_season"]+player_data_df["assist_season"])
+
+player_data_df
