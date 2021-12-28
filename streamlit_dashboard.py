@@ -222,44 +222,50 @@ with col4:
     st.markdown('**Player comparison**')
     st.caption('Select at least one player in the multiselect box in the left panel.')
 
-    fig2 = go.Figure()
+    if len(players_selected) == 0:
+        
+        st.image('https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/240/apple/285/woman-detective_1f575-fe0f-200d-2640-fe0f.png')
+        
+    else:
 
-    categories=['Expected Goal','Expected assists','Goals','Assists']
+        fig2 = go.Figure()
 
-    value_range = pd.Series([0.0,0.1])
+        categories=['Expected Goal','Expected assists','Goals','Assists']
 
-    for p in players_selected:
+        value_range = pd.Series([0.0,0.1])
 
-        radar_data = graph_data[graph_data["name"] == p]
+        for p in players_selected:
 
-        xg = radar_data["xg"].iloc[0]
-        xa = radar_data["xa"].iloc[0]
-        goals = radar_data["goals"].iloc[0]
-        assists = radar_data["assists"].iloc[0]
+            radar_data = graph_data[graph_data["name"] == p]
 
-        add_range = pd.Series([xg,xa,goals,assists])
-        value_range = value_range.append(add_range, ignore_index=True)
+            xg = radar_data["xg"].iloc[0]
+            xa = radar_data["xa"].iloc[0]
+            goals = radar_data["goals"].iloc[0]
+            assists = radar_data["assists"].iloc[0]
 
-        fig2.add_trace(go.Scatterpolar(
-              r=[xg, xa, goals, assists],
-              theta=categories,
-              fill='toself',
-              name=p
-        ))
+            add_range = pd.Series([xg,xa,goals,assists])
+            value_range = value_range.append(add_range, ignore_index=True)
 
-    min_value = min(value_range)
-    max_value = max(value_range)
+            fig2.add_trace(go.Scatterpolar(
+                  r=[xg, xa, goals, assists],
+                  theta=categories,
+                  fill='toself',
+                  name=p
+            ))
 
-    fig2.update_layout(
-      polar=dict(
-        radialaxis=dict(
-          visible=True,
-          range=[min_value, max_value]
-        )),
-      showlegend=False
-    )
+        min_value = min(value_range)
+        max_value = max(value_range)
 
-    st.plotly_chart(fig2, use_container_width=True)
+        fig2.update_layout(
+          polar=dict(
+            radialaxis=dict(
+              visible=True,
+              range=[min_value, max_value]
+            )),
+          showlegend=False
+        )
+
+        st.plotly_chart(fig2, use_container_width=True)
 
 
 #################### DATAFRAME ROW
