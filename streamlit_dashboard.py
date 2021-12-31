@@ -15,16 +15,21 @@ st.set_page_config(
 
 ##### LOADING AND RE-WORKING THE DATA
 
-DATA_URL = f"https://docs.google.com/spreadsheets/d/1qmYMedwJDy4j0vXB7pED_ruzcxjGXMUAXVhUbAcnTmk/gviz/tq?tqx=out:csv&sheet=paste"
+
+g_url = "https://docs.google.com/spreadsheets/d/1qmYMedwJDy4j0vXB7pED_ruzcxjGXMUAXVhUbAcnTmk/export?format=csv&gid="
 
 #@st.cache
-def load_data(nrows):
-    data = pd.read_csv(DATA_URL, nrows=nrows)
+def load_data(id, nrows):
+    url = g_url + str(id)
+    data = pd.read_csv(url, nrows=nrows)
     lowercase = lambda x: str(x).lower()
     data.rename(lowercase, axis='columns', inplace=True)
     return data
 
-data = load_data(10000)
+data = load_data(0,10000)
+attacking_fdr = load_data(1332666413,50)
+defending_fdr = load_data(570497350,50)
+
 
 data = data.drop(['fpl_player_id'], axis=1)
 data = data.drop(['selected_by_percent'], axis=1)
@@ -282,4 +287,26 @@ if timeframe == "All season":
 
 else:
     st.markdown('**Player data for last 4 matches**')
-    st.dataframe(graph_data,10000)    
+    st.dataframe(graph_data,10000)   
+
+
+#################### FDR ROW
+
+st.markdown(text)
+
+colA, colB= st.columns([1,3])
+
+with colA:
+    fdr_position = st.radio(
+             "Select the position FDR",
+             ('Attacking FDR','Defending FDR'))
+
+with colB:
+
+    if fdr_position == "Attacking FDR":
+        
+        st.dataframe(attacking_fdr.style.highlight_max(props='color:white;background-color:darkblue', axis=0))
+
+    else:
+        st.dataframe(defending_fdr.style.highlight_max(props='color:white;background-color:darkblue', axis=0))
+
